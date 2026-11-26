@@ -2,6 +2,7 @@ import { useId, useRef, useState } from 'react';
 import { motion } from 'motion/react';
 import {
   ArrowsLeftRight,
+  At,
   ChatsTeardrop,
   Eye,
   EyeSlash,
@@ -165,22 +166,23 @@ export function AuthScreens({ mode, joinCode, accountName, onAuthenticated, onSw
           initial={{ opacity: 0, y: 16, scale: 0.98 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-          className="w-full max-w-[440px]"
+          className="w-full max-w-[424px]"
         >
           <form onSubmit={handleSubmit} className="relative">
-            <div className="relative rounded-[30px] bg-[#0B1730]/78 backdrop-blur-2xl border border-blue-200/20 shadow-[0_28px_80px_-16px_rgba(3,7,20,0.9),inset_0_1px_0_rgba(191,219,254,0.14)] p-4 pb-10 overflow-visible">
-              {/* Subtle center cosmic seam aura behind stacked panels */}
+            <div className="relative rounded-[30px] bg-[#061026]/55 backdrop-blur-2xl border border-blue-200/18 shadow-[0_28px_80px_-14px_rgba(2,6,20,0.92),inset_0_1px_0_rgba(191,219,254,0.16)] p-3.5 pb-9 overflow-visible">
+              {/* Luminous blue horizon beam glowing through the center notch seam */}
               <div
                 aria-hidden="true"
-                className="pointer-events-none absolute left-1/2 top-[48%] -translate-x-1/2 -translate-y-1/2 w-[82%] h-24 rounded-full blur-2xl"
+                className="pointer-events-none absolute left-1/2 top-[50%] -translate-x-1/2 -translate-y-1/2 w-[88%] h-24 rounded-full blur-2xl"
                 style={{
-                  background: 'radial-gradient(ellipse at center, rgba(59, 130, 246, 0.28) 0%, transparent 72%)',
+                  background:
+                    'radial-gradient(ellipse at center, rgba(96, 165, 250, 0.34) 0%, rgba(59, 130, 246, 0.14) 55%, transparent 78%)',
                 }}
               />
 
               {/* Top Card Pill Tabs */}
-              <div className="relative z-10 flex items-center justify-between gap-2 mb-3.5 px-1">
-                <div className="flex items-center p-1 rounded-full bg-[#070E1F]/90 border border-blue-300/15 text-xs font-medium">
+              <div className="relative z-10 flex items-center justify-between gap-2 mb-3 px-1">
+                <div className="flex items-center p-1 rounded-full bg-[#040B1A]/75 border border-blue-300/15 text-xs font-medium">
                   {mode === 'setup' && (
                     <button
                       type="button"
@@ -190,7 +192,7 @@ export function AuthScreens({ mode, joinCode, accountName, onAuthenticated, onSw
                       }}
                       className={`px-3.5 py-1 rounded-full transition cursor-pointer ${
                         activeTab === 'setup'
-                          ? 'bg-[#172B52] text-white border border-blue-300/20 shadow-xs'
+                          ? 'bg-[#14284E] text-white border border-blue-300/22 shadow-xs'
                           : 'text-slate-300 hover:text-white'
                       }`}
                     >
@@ -205,7 +207,7 @@ export function AuthScreens({ mode, joinCode, accountName, onAuthenticated, onSw
                     }}
                     className={`px-3.5 py-1 rounded-full transition cursor-pointer ${
                       activeTab === 'login'
-                        ? 'bg-[#172B52] text-white border border-blue-300/20 shadow-xs'
+                        ? 'bg-[#14284E] text-white border border-blue-300/22 shadow-xs'
                         : 'text-slate-300 hover:text-white'
                     }`}
                   >
@@ -219,7 +221,7 @@ export function AuthScreens({ mode, joinCode, accountName, onAuthenticated, onSw
                     }}
                     className={`px-3.5 py-1 rounded-full transition cursor-pointer ${
                       activeTab === 'join'
-                        ? 'bg-[#172B52] text-white border border-blue-300/20 shadow-xs'
+                        ? 'bg-[#14284E] text-white border border-blue-300/22 shadow-xs'
                         : 'text-slate-300 hover:text-white'
                     }`}
                   >
@@ -227,8 +229,8 @@ export function AuthScreens({ mode, joinCode, accountName, onAuthenticated, onSw
                   </button>
                 </div>
 
-                <span className="px-2.5 py-1 rounded-full bg-blue-400/10 border border-blue-300/15 text-[11px] font-medium text-blue-200/85">
-                  {activeTab === 'setup' ? 'First Run' : activeTab === 'join' ? 'Invite Access' : 'Workspace Auth'}
+                <span className="text-[11px] font-medium text-blue-200/70 pr-1.5">
+                  {accountName || 'DeepChat'}
                 </span>
               </div>
 
@@ -242,60 +244,55 @@ export function AuthScreens({ mode, joinCode, accountName, onAuthenticated, onSw
                 </div>
               )}
 
-              {/* Dual Stacked Glass Sub-Panels */}
-              <div className="relative z-10 space-y-2">
-                {/* Top Sub-Panel: Identity / Workspace */}
-                <div className="auth-subpanel rounded-[22px] p-4 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <label htmlFor={emailId} className="text-xs font-medium text-slate-300">
+              {/* Dual Sculpted Translucent Sub-Panels */}
+              <div className="relative z-10 space-y-1.5">
+                {/* Top Sub-Panel: Identity / Account */}
+                <div className="auth-subpanel auth-notch-top rounded-[22px] p-4 pb-5 flex items-center justify-between gap-3">
+                  <div className="flex-1 min-w-0 space-y-2">
+                    <label htmlFor={emailId} className="block text-xs font-medium text-slate-300/85">
                       {activeTab === 'setup' ? 'Workspace & Admin' : activeTab === 'join' ? 'New Member' : 'Account'}
                     </label>
-                    <span className="px-2.5 py-0.5 rounded-full bg-blue-400/12 border border-blue-300/20 text-[11px] font-semibold text-blue-300">
-                      {accountName || 'DeepChat'}
-                    </span>
-                  </div>
 
-                  {activeTab === 'setup' && (
-                    <div>
-                      <label htmlFor={workspaceId} className="sr-only">
-                        Workspace Name
-                      </label>
-                      <input
-                        id={workspaceId}
-                        name="organization"
-                        type="text"
-                        required
-                        autoComplete="organization"
-                        enterKeyHint="next"
-                        value={workspaceName}
-                        onChange={(e) => setWorkspaceName(e.target.value)}
-                        placeholder="Workspace Name"
-                        className="w-full bg-transparent text-lg font-semibold text-white placeholder-slate-400/70 focus:outline-none border-b border-blue-300/15 pb-1.5"
-                      />
-                    </div>
-                  )}
+                    {activeTab === 'setup' && (
+                      <div>
+                        <label htmlFor={workspaceId} className="sr-only">
+                          Workspace Name
+                        </label>
+                        <input
+                          id={workspaceId}
+                          name="organization"
+                          type="text"
+                          required
+                          autoComplete="organization"
+                          enterKeyHint="next"
+                          value={workspaceName}
+                          onChange={(e) => setWorkspaceName(e.target.value)}
+                          placeholder="Workspace Name"
+                          className="w-full bg-transparent text-base font-semibold text-white placeholder-slate-400/65 focus:outline-none border-b border-blue-300/15 pb-1"
+                        />
+                      </div>
+                    )}
 
-                  {(activeTab === 'setup' || activeTab === 'join') && (
-                    <div>
-                      <label htmlFor={nameId} className="sr-only">
-                        Full Name
-                      </label>
-                      <input
-                        id={nameId}
-                        name="fullname"
-                        type="text"
-                        required
-                        autoComplete="name"
-                        enterKeyHint="next"
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        placeholder="Your Name (e.g. Alex Rivera)"
-                        className="w-full bg-transparent text-base font-medium text-white placeholder-slate-400/70 focus:outline-none border-b border-blue-300/15 pb-1.5"
-                      />
-                    </div>
-                  )}
+                    {(activeTab === 'setup' || activeTab === 'join') && (
+                      <div>
+                        <label htmlFor={nameId} className="sr-only">
+                          Full Name
+                        </label>
+                        <input
+                          id={nameId}
+                          name="fullname"
+                          type="text"
+                          required
+                          autoComplete="name"
+                          enterKeyHint="next"
+                          value={name}
+                          onChange={(e) => setName(e.target.value)}
+                          placeholder="Your Name"
+                          className="w-full bg-transparent text-base font-medium text-white placeholder-slate-400/65 focus:outline-none border-b border-blue-300/15 pb-1"
+                        />
+                      </div>
+                    )}
 
-                  <div className="flex items-center justify-between gap-3">
                     <input
                       ref={emailInputRef}
                       id={emailId}
@@ -308,17 +305,22 @@ export function AuthScreens({ mode, joinCode, accountName, onAuthenticated, onSw
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="alex@deepchat.local"
-                      className="flex-1 min-w-0 bg-transparent text-lg sm:text-xl font-semibold text-white placeholder-slate-400/70 focus:outline-none"
+                      className="w-full bg-transparent text-[20px] leading-snug font-medium text-white placeholder-slate-400/60 focus:outline-none tracking-tight"
                     />
-                    <span className="px-2.5 py-1 rounded-full bg-[#15294F] border border-blue-300/20 text-[11px] font-semibold text-blue-100 shrink-0 tracking-wide">
-                      EMAIL
+                  </div>
+
+                  {/* Clean Vertical Side Capsule (matching reference selector capsule) */}
+                  <div className="shrink-0 w-14 py-2.5 rounded-2xl bg-[#0D1E42]/70 border border-blue-200/15 flex flex-col items-center justify-center gap-1 shadow-inner">
+                    <span className="w-7 h-7 rounded-full bg-blue-500/20 border border-blue-300/25 flex items-center justify-center text-blue-300">
+                      <At size={15} weight="bold" />
                     </span>
+                    <span className="text-[10px] font-bold tracking-wider text-blue-100/90">EMAIL</span>
                   </div>
                 </div>
 
-                {/* Center Orb Divider */}
-                <div className="relative z-20 flex justify-center -my-4 pointer-events-none">
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 border-4 border-[#0B1730] flex items-center justify-center text-white shadow-[0_0_24px_rgba(59,130,246,0.6)]">
+                {/* Floating Center Lock Orb inside sculpted notch */}
+                <div className="relative z-20 flex justify-center -my-5 pointer-events-none">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-b from-[#60A5FA] to-[#2563EB] border border-blue-200/45 flex items-center justify-center text-white shadow-[0_0_26px_rgba(59,130,246,0.75)]">
                     {activeTab === 'join' ? (
                       <UserPlus size={16} weight="bold" />
                     ) : activeTab === 'setup' ? (
@@ -330,39 +332,39 @@ export function AuthScreens({ mode, joinCode, accountName, onAuthenticated, onSw
                 </div>
 
                 {/* Bottom Sub-Panel: Security / Password */}
-                <div className="auth-subpanel-dark rounded-[22px] p-4 space-y-2.5">
-                  <div className="flex items-center justify-between">
-                    <label htmlFor={passwordId} className="text-xs font-medium text-slate-300">
-                      {activeTab === 'join' ? 'Invite Code & Password' : 'Password'}
-                    </label>
-                    <span className="text-[11px] text-slate-300/90 flex items-center gap-1">
-                      <ShieldCheck size={13} weight="duotone" className="text-blue-400" />
-                      Encrypted session
-                    </span>
-                  </div>
-
-                  {activeTab === 'join' && (
-                    <div>
-                      <label htmlFor={inviteId} className="sr-only">
-                        Invite Code
+                <div className="auth-subpanel-dark auth-notch-bottom rounded-[22px] p-4 pt-5 flex items-center justify-between gap-3">
+                  <div className="flex-1 min-w-0 space-y-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <label htmlFor={passwordId} className="text-xs font-medium text-slate-300/85">
+                        {activeTab === 'join' ? 'Invite Code & Password' : 'Password'}
                       </label>
-                      <input
-                        id={inviteId}
-                        name="invite_code"
-                        type="text"
-                        required
-                        autoComplete="off"
-                        spellCheck={false}
-                        enterKeyHint="next"
-                        value={inviteInput}
-                        onChange={(e) => setInviteInput(e.target.value)}
-                        placeholder="Enter invite code"
-                        className="w-full bg-transparent text-sm font-mono text-blue-200 placeholder-slate-400/70 focus:outline-none border-b border-blue-300/15 pb-1.5"
-                      />
+                      <span className="text-[10.5px] text-blue-200/70 flex items-center gap-1">
+                        <ShieldCheck size={12} weight="duotone" className="text-blue-400" />
+                        Encrypted
+                      </span>
                     </div>
-                  )}
 
-                  <div className="flex items-center justify-between gap-3">
+                    {activeTab === 'join' && (
+                      <div>
+                        <label htmlFor={inviteId} className="sr-only">
+                          Invite Code
+                        </label>
+                        <input
+                          id={inviteId}
+                          name="invite_code"
+                          type="text"
+                          required
+                          autoComplete="off"
+                          spellCheck={false}
+                          enterKeyHint="next"
+                          value={inviteInput}
+                          onChange={(e) => setInviteInput(e.target.value)}
+                          placeholder="Enter invite code"
+                          className="w-full bg-transparent text-sm font-mono text-blue-200 placeholder-slate-400/65 focus:outline-none border-b border-blue-300/15 pb-1"
+                        />
+                      </div>
+                    )}
+
                     <input
                       id={passwordId}
                       name="password"
@@ -374,36 +376,43 @@ export function AuthScreens({ mode, joinCode, accountName, onAuthenticated, onSw
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="••••••••"
-                      className="flex-1 min-w-0 bg-transparent text-lg sm:text-xl font-semibold text-white placeholder-slate-400/70 focus:outline-none tracking-wider"
+                      className="w-full bg-transparent text-[20px] leading-snug font-medium text-white placeholder-slate-400/60 focus:outline-none tracking-wider"
                     />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword((s) => !s)}
-                      aria-label={showPassword ? 'Hide password' : 'Show password'}
-                      className="w-8 h-8 rounded-full bg-[#15294F] border border-blue-300/20 flex items-center justify-center text-blue-200 hover:text-white hover:border-blue-300/40 shrink-0 cursor-pointer transition"
-                    >
-                      {showPassword ? <EyeSlash size={15} weight="duotone" /> : <Eye size={15} weight="duotone" />}
-                    </button>
+
+                    <p className="text-[11px] text-slate-400/85">
+                      {activeTab === 'setup'
+                        ? 'Creates your admin account & #General room'
+                        : activeTab === 'join'
+                        ? 'Instant workspace access via invite code'
+                        : 'Rooms, DMs, private vaults & calls'}
+                    </p>
                   </div>
 
-                  <p className="text-[11px] text-slate-400 pt-0.5">
-                    {activeTab === 'setup'
-                      ? 'Creates your admin account & default #General room'
-                      : activeTab === 'join'
-                      ? 'Join workspace instantly via invite code'
-                      : 'Access all your rooms, DMs, private vaults & calls'}
-                  </p>
+                  {/* Password Visibility Toggle Capsule */}
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((s) => !s)}
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                    className="shrink-0 w-14 py-2.5 rounded-2xl bg-[#0D1E42]/70 border border-blue-200/15 hover:border-blue-300/35 flex flex-col items-center justify-center gap-1 text-blue-200 hover:text-white cursor-pointer transition shadow-inner"
+                  >
+                    <span className="w-7 h-7 rounded-full bg-blue-500/20 border border-blue-300/25 flex items-center justify-center">
+                      {showPassword ? <EyeSlash size={15} weight="duotone" /> : <Eye size={15} weight="duotone" />}
+                    </span>
+                    <span className="text-[10px] font-bold tracking-wider text-blue-100/85">
+                      {showPassword ? 'HIDE' : 'SHOW'}
+                    </span>
+                  </button>
                 </div>
               </div>
 
               {/* Overlapping Cosmic Blue CTA Pill */}
-              <div className="absolute left-1/2 -bottom-5 -translate-x-1/2 w-[58%] min-w-[205px] z-20">
+              <div className="absolute left-1/2 -bottom-4.5 -translate-x-1/2 w-[52%] min-w-[190px] z-20">
                 <motion.button
                   type="submit"
                   disabled={loading}
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
-                  className="w-full py-3 px-6 rounded-full bg-gradient-to-r from-[#66A8FF] via-[#4D92FA] to-[#3B82F6] hover:from-[#79B4FF] hover:to-[#5393FA] disabled:opacity-50 text-white text-sm font-bold border-t border-white/35 shadow-[0_10px_32px_rgba(59,130,246,0.55)] transition cursor-pointer"
+                  className="w-full py-2.5 px-6 rounded-full bg-gradient-to-r from-[#6EB0FF] via-[#4C91FA] to-[#3B82F6] hover:from-[#7EBAFF] hover:to-[#5393FA] disabled:opacity-50 text-white text-sm font-bold border-t border-white/40 shadow-[0_10px_28px_rgba(59,130,246,0.52)] transition cursor-pointer"
                 >
                   {loading
                     ? 'Connecting...'
@@ -417,7 +426,7 @@ export function AuthScreens({ mode, joinCode, accountName, onAuthenticated, onSw
             </div>
           </form>
 
-          <p className="mt-10 text-center text-xs text-slate-400">
+          <p className="mt-9 text-center text-xs text-slate-400">
             DeepChat powered by{' '}
             <span className="text-blue-400 font-medium">Private Rooms · WebRTC Calls · FastAPI</span>
           </p>
