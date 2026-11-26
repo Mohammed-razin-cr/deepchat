@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+backend/.venv/
+backend/storage/
+*.db
+*.db-wal
+*.db-shm
+*.sqlite*
+
+# Node / Frontend
+frontend/node_modules/
+frontend/dist/
+.vite/
+
+# Environment & Secrets
+.env
+.env.*
+!.env.example
+vapid.json
+
+# OS / Editor / Tools
+.DS_Store
+Thumbs.db
+*.log
+.ruby-lsp/
+.vscode/
+.idea/

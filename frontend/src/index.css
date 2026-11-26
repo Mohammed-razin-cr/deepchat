@@ -1,0 +1,160 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  color-scheme: light dark;
+  --accent-light: #7c3aed;
+  --accent-dark: #8b5cf6;
+  --accent-color: var(--accent-dark);
+  --scrollbar-track: #f4f2fa;
+  --scrollbar-thumb: #c4b5fd;
+  --autofill-bg: #102042;
+  --autofill-text: #f8fafc;
+  --autofill-ring: rgba(96, 165, 250, 0.75);
+  --in-oklab: ;
+
+  @media (prefers-color-scheme: dark) {
+    --accent-color: var(--accent-dark);
+    --scrollbar-track: #0c0916;
+    --scrollbar-thumb: #2e254b;
+  }
+
+  @supports (color: light-dark(white, black)) {
+    --accent-color: light-dark(var(--accent-light), var(--accent-dark));
+    --scrollbar-track: light-dark(#f4f2fa, #0c0916);
+    --scrollbar-thumb: light-dark(#c4b5fd, #2e254b);
+  }
+
+  accent-color: var(--accent-color);
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+}
+
+@supports (background: linear-gradient(in oklab, white, black)) {
+  :root {
+    --in-oklab: in oklab;
+  }
+}
+
+html.dark {
+  color-scheme: dark;
+  --scrollbar-track: #0c0916;
+  --scrollbar-thumb: #2e254b;
+  --autofill-bg: #111c36;
+  --autofill-text: #f8fafc;
+}
+
+html:not(.dark) {
+  color-scheme: light;
+  --scrollbar-track: #f4f2fa;
+  --scrollbar-thumb: #c4b5fd;
+  --autofill-bg: #eef2ff;
+  --autofill-text: #18181b;
+}
+
+html[data-accent="indigo"] {
+  --accent-light: #4f46e5;
+  --accent-dark: #6366f1;
+}
+html[data-accent="blue"] {
+  --accent-light: #2563eb;
+  --accent-dark: #3b82f6;
+}
+html[data-accent="emerald"] {
+  --accent-light: #059669;
+  --accent-dark: #10b981;
+}
+html[data-accent="rose"] {
+  --accent-light: #e11d48;
+  --accent-dark: #f43f5e;
+}
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+    font-family: 'Plus Jakarta Sans', ui-sans-serif, system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  code,
+  kbd,
+  pre,
+  .font-mono {
+    font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+  }
+
+  button:focus-visible,
+  a:focus-visible,
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible {
+    outline: 2px solid rgba(139, 92, 246, 0.8);
+    outline-offset: 2px;
+  }
+}
+
+/* Override UA autofill banner without layout shift */
+input:is(:autofill, :-webkit-autofill),
+select:is(:autofill, :-webkit-autofill) {
+  box-shadow:
+    inset 0 0 0 2px var(--autofill-ring),
+    inset 0 0 0 100vmax var(--autofill-bg);
+  -webkit-text-fill-color: var(--autofill-text);
+  caret-color: var(--autofill-text);
+  border-radius: 0.75rem;
+}
+
+dialog::backdrop {
+  background-color: rgba(7, 5, 14, 0.74);
+  backdrop-filter: blur(10px);
+}
+
+@supports not (scrollbar-color: auto) {
+  * {
+    scrollbar-width: auto;
+  }
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  ::-webkit-scrollbar-track {
+    background: var(--scrollbar-track);
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-thumb);
+    border-radius: 9999px;
+  }
+}
+
+/* Frosted glass card inspired by Images 3 & 4 */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(22px);
+  border: 1px solid rgba(124, 58, 237, 0.14);
+  box-shadow:
+    0 6px 24px -8px rgba(76, 29, 149, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+.dark .glass-panel {
+  background: linear-gradient(165deg var(--in-oklab), rgba(255, 255, 255, 0.068), rgba(255, 255, 255, 0.022));
+  backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow:
+    0 12px 32px -12px rgba(0, 0, 0, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.085);
+}
+
+.auth-subpanel {
+  background: linear-gradient(180deg var(--in-oklab), rgba(14, 29, 60, 0.82), rgba(10, 21, 46, 0.78));
+  border: 1px solid rgba(147, 197, 253, 0.16);
+  box-shadow: inset 0 1px 0 rgba(191, 219, 254, 0.1);
+}
+
+.auth-subpanel-dark {
+  background: linear-gradient(180deg var(--in-oklab), rgba(9, 19, 41, 0.88), rgba(7, 14, 32, 0.84));
+  border: 1px solid rgba(147, 197, 253, 0.13);
+  box-shadow: inset 0 1px 0 rgba(191, 219, 254, 0.07);
+}
