@@ -113,7 +113,7 @@ export function ChatDetailsPanel({
       const ts = new Date(m.created_at).toLocaleString();
       const author = m.creator?.name || 'Unknown';
       const pinTag = m.is_pinned ? ' [Pinned]' : '';
-      lines.push(`### ${author} — ${ts}${pinTag}`);
+      lines.push(`### ${author} - ${ts}${pinTag}`);
       if (m.reply_to) {
         lines.push(`> Replying to **${m.reply_to.creator_name}**: ${m.reply_to.body}`);
       }

@@ -784,7 +784,7 @@ export function ChatArea({
             </div>
             <p className="font-bold text-zinc-800 dark:text-white">Welcome to {room.display_name}</p>
             <p className="text-xs text-zinc-500 dark:text-violet-200/55 mt-1 max-w-sm">
-              Start chatting — supports markdown, code blocks, threads, voice notes, polls, @mentions, and /todo items.
+              Start chatting - supports markdown, code blocks, threads, voice notes, polls, @mentions, and /todo items.
             </p>
           </div>
         )}

@@ -127,7 +127,7 @@ export function CallOverlay({
         sendWs({ type: 'call.join', audio: true, video: initialVideo });
       } catch (err) {
         const message = err instanceof Error ? err.message : '';
-        setMediaError(message || 'Microphone/camera unavailable — joined in listen-only mode');
+        setMediaError(message || 'Microphone/camera unavailable - joined in listen-only mode');
         sendWs({ type: 'call.join', audio: false, video: false });
       }
     })();
@@ -397,7 +397,7 @@ export function CallOverlay({
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2.5">
           <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
-          <span className="font-semibold text-sm">{room.display_name} — Live Call</span>
+          <span className="font-semibold text-sm">{room.display_name} - Live Call</span>
           <span className="px-2 py-0.5 rounded-md bg-zinc-900 border border-zinc-800 text-[11px] font-mono text-emerald-400">
             {formatCallDuration(elapsedSeconds)}
           </span>
