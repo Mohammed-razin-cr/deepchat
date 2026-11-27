@@ -6,6 +6,8 @@ import {
   BellSlash,
   ChartBar,
   Clock,
+  Code,
+  CodeBlock,
   Hash,
   List,
   LockKey,
@@ -14,12 +16,16 @@ import {
   Paperclip,
   PhoneCall,
   PushPin,
+  Quotes,
   ShareNetwork,
   SidebarSimple,
   SlidersHorizontal,
   SmileyWink,
   Star,
   StopCircle,
+  TextAa,
+  TextB,
+  TextItalic,
   Timer,
   UsersThree,
   VideoCamera,
@@ -96,6 +102,7 @@ interface ChatAreaProps {
   onToggleBoost: (id: number, emoji: string) => Promise<void>;
   onTogglePin: (id: number) => Promise<void>;
   onToggleBookmark: (id: number) => Promise<void>;
+  onForwardMessage: (msg: Message) => void;
   onChangeInvolvement: (involvement: Room['involvement']) => Promise<void>;
   onTyping: () => void;
 }
@@ -141,6 +148,7 @@ export function ChatArea({
   onToggleBoost,
   onTogglePin,
   onToggleBookmark,
+  onForwardMessage,
   onChangeInvolvement,
   onTyping,
 }: ChatAreaProps) {
@@ -148,6 +156,7 @@ export function ChatArea({
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [replyTo, setReplyTo] = useState<Message | null>(null);
   const [showComposerEmojis, setShowComposerEmojis] = useState(false);
+  const [showFormatBar, setShowFormatBar] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [sending, setSending] = useState(false);
   const [recording, setRecording] = useState(false);
@@ -369,6 +378,22 @@ export function ChatArea({
     } finally {
       setUploading(false);
     }
+  };
+
+  const applyFormat = (prefix: string, suffix: string, placeholder: string) => {
+    const el = textareaRef.current;
+    const start = el?.selectionStart ?? draft.length;
+    const end = el?.selectionEnd ?? draft.length;
+    const selected = draft.slice(start, end) || placeholder;
+    const before = draft.slice(0, start);
+    const after = draft.slice(end);
+    setDraft(`${before}${prefix}${selected}${suffix}${after}`);
+    requestAnimationFrame(() => {
+      if (!textareaRef.current) return;
+      textareaRef.current.focus();
+      const selStart = start + prefix.length;
+      textareaRef.current.setSelectionRange(selStart, selStart + selected.length);
+    });
   };
 
   const handleDraftChange = (val: string) => {
@@ -820,6 +845,7 @@ export function ChatArea({
               onToggleEmojiMenu={() => setEmojiMenuFor(emojiMenuFor === msg.id ? null : msg.id)}
               onTogglePin={(id) => runAction(() => onTogglePin(id), 'Failed to update pin')}
               onToggleBookmark={(id) => runAction(() => onToggleBookmark(id), 'Failed to update bookmark')}
+              onForward={onForwardMessage}
             />
           );
         })}
@@ -1052,6 +1078,36 @@ export function ChatArea({
           </div>
         )}
 
+        {showFormatBar && !recording && (
+          <div className="mb-2 flex flex-wrap items-center gap-1 px-1">
+            {[
+              { label: 'Bold', prefix: '**', suffix: '**', placeholder: 'bold text', icon: <TextB size={14} weight="bold" /> },
+              { label: 'Italic', prefix: '*', suffix: '*', placeholder: 'italic text', icon: <TextItalic size={14} /> },
+              { label: 'Code', prefix: '`', suffix: '`', placeholder: 'code', icon: <Code size={14} /> },
+              {
+                label: 'Code Block',
+                prefix: '```\n',
+                suffix: '\n```',
+                placeholder: 'code block',
+                icon: <CodeBlock size={14} />,
+              },
+              { label: 'Quote', prefix: '> ', suffix: '', placeholder: 'quoted text', icon: <Quotes size={14} /> },
+            ].map((item) => (
+                <button
+                  key={item.label}
+                  type="button"
+                  title={item.label}
+                  aria-label={item.label}
+                  onClick={() => applyFormat(item.prefix, item.suffix, item.placeholder)}
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white/80 dark:bg-white/[0.06] border border-violet-200/70 dark:border-white/[0.09] hover:border-violet-400 text-[11px] font-medium text-zinc-700 dark:text-zinc-200 transition cursor-pointer"
+                >
+                  {item.icon}
+                  <span>{item.label}</span>
+                </button>
+              ))}
+          </div>
+        )}
+
         {recording ? (
           <div className="flex items-center justify-between gap-3 glass-panel rounded-[28px] px-4 py-2 border-rose-400/40">
             <div className="flex items-center gap-2.5 text-xs font-semibold text-rose-500">
@@ -1117,6 +1173,16 @@ export function ChatArea({
               value={draft}
               onChange={(e) => handleDraftChange(e.target.value)}
               onKeyDown={(e) => {
+                if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'b') {
+                  e.preventDefault();
+                  applyFormat('**', '**', 'bold text');
+                  return;
+                }
+                if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'i') {
+                  e.preventDefault();
+                  applyFormat('*', '*', 'italic text');
+                  return;
+                }
                 if (e.key === 'Enter' && !e.shiftKey) {
                   e.preventDefault();
                   handleSubmit();
@@ -1129,6 +1195,21 @@ export function ChatArea({
               }
               className="flex-1 bg-transparent resize-none py-2 px-1.5 text-sm text-zinc-900 dark:text-white placeholder-zinc-400 focus:outline-none max-h-32"
             />
+
+            <button
+              type="button"
+              onClick={() => setShowFormatBar((s) => !s)}
+              title="Formatting options (Ctrl+B, Ctrl+I)"
+              aria-label="Formatting options"
+              aria-pressed={showFormatBar}
+              className={`p-2 rounded-full transition cursor-pointer ${
+                showFormatBar
+                  ? 'text-violet-600 dark:text-violet-300 bg-violet-500/15'
+                  : 'text-zinc-500 hover:text-violet-500 hover:bg-violet-500/10'
+              }`}
+            >
+              <TextAa size={18} weight="duotone" />
+            </button>
 
             <button
               type="button"

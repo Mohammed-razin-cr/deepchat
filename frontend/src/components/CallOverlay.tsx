@@ -5,6 +5,7 @@ import {
   ArrowsOutSimple,
   Check,
   Copy,
+  HandPalm,
   MonitorArrowUp,
   Microphone,
   MicrophoneSlash,
@@ -29,6 +30,16 @@ interface CallOverlayProps {
 
 const ICE_SERVERS = [{ urls: 'stun:stun.l.google.com:19302' }];
 
+function formatCallDuration(secs: number) {
+  const hrs = Math.floor(secs / 3600);
+  const mins = Math.floor((secs % 3600) / 60);
+  const rem = secs % 60;
+  if (hrs > 0) {
+    return `${hrs}:${mins.toString().padStart(2, '0')}:${rem.toString().padStart(2, '0')}`;
+  }
+  return `${mins.toString().padStart(2, '0')}:${rem.toString().padStart(2, '0')}`;
+}
+
 export function CallOverlay({
   room,
   currentUser,
@@ -42,11 +53,15 @@ export function CallOverlay({
   const [micOn, setMicOn] = useState(true);
   const [camOn, setCamOn] = useState(initialVideo);
   const [sharingScreen, setSharingScreen] = useState(false);
+  const [handRaised, setHandRaised] = useState(false);
+  const [speaking, setSpeaking] = useState(false);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [minimized, setMinimized] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
   const [mediaError, setMediaError] = useState('');
 
   const localStreamRef = useRef<MediaStream | null>(null);
+  const micEnabledRef = useRef(true);
   const screenStreamRef = useRef<MediaStream | null>(null);
   const localVideoRef = useRef<HTMLVideoElement | null>(null);
   const peersRef = useRef<Map<number, RTCPeerConnection>>(new Map());
@@ -61,10 +76,17 @@ export function CallOverlay({
     [wsRef]
   );
 
+  useEffect(() => {
+    const timer = setInterval(() => setElapsedSeconds((s) => s + 1), 1000);
+    return () => clearInterval(timer);
+  }, [room.id]);
+
   // Acquire local media and announce join
   useEffect(() => {
     let active = true;
     const peers = peersRef.current;
+    let audioCtx: AudioContext | null = null;
+    let meterTimer: ReturnType<typeof setInterval> | null = null;
 
     (async () => {
       try {
@@ -80,6 +102,28 @@ export function CallOverlay({
         if (localVideoRef.current) {
           localVideoRef.current.srcObject = stream;
         }
+        if (stream.getAudioTracks().length > 0 && typeof AudioContext !== 'undefined') {
+          try {
+            audioCtx = new AudioContext();
+            const source = audioCtx.createMediaStreamSource(stream);
+            const analyser = audioCtx.createAnalyser();
+            analyser.fftSize = 256;
+            source.connect(analyser);
+            const data = new Uint8Array(analyser.frequencyBinCount);
+            meterTimer = setInterval(() => {
+              if (!active || !micEnabledRef.current) {
+                setSpeaking(false);
+                return;
+              }
+              analyser.getByteFrequencyData(data);
+              let sum = 0;
+              for (let i = 0; i < data.length; i++) sum += data[i];
+              setSpeaking(sum / data.length > 14);
+            }, 180);
+          } catch {
+            // AudioContext unavailable in restricted environment
+          }
+        }
         sendWs({ type: 'call.join', audio: true, video: initialVideo });
       } catch (err) {
         const message = err instanceof Error ? err.message : '';
@@ -90,6 +134,10 @@ export function CallOverlay({
 
     return () => {
       active = false;
+      if (meterTimer) clearInterval(meterTimer);
+      if (audioCtx && audioCtx.state !== 'closed') {
+        void audioCtx.close();
+      }
       sendWs({ type: 'call.leave' });
       localStreamRef.current?.getTracks().forEach((t) => t.stop());
       screenStreamRef.current?.getTracks().forEach((t) => t.stop());
@@ -227,11 +275,19 @@ export function CallOverlay({
 
   const toggleMic = () => {
     const next = !micOn;
+    micEnabledRef.current = next;
     setMicOn(next);
+    if (!next) setSpeaking(false);
     localStreamRef.current?.getAudioTracks().forEach((t) => {
       t.enabled = next;
     });
     sendWs({ type: 'call.media', audio: next, video: camOn });
+  };
+
+  const toggleHand = () => {
+    const next = !handRaised;
+    setHandRaised(next);
+    sendWs({ type: 'call.hand', hand_raised: next });
   };
 
   const toggleCam = async () => {
@@ -310,7 +366,7 @@ export function CallOverlay({
       >
         <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
         <div className="text-xs font-semibold">
-          {room.display_name} · {Math.max(1, participants.length)} in call
+          {room.display_name} · {Math.max(1, participants.length)} in call · {formatCallDuration(elapsedSeconds)}
         </div>
         <button
           type="button"
@@ -342,6 +398,9 @@ export function CallOverlay({
         <div className="flex items-center gap-2.5">
           <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
           <span className="font-semibold text-sm">{room.display_name} — Live Call</span>
+          <span className="px-2 py-0.5 rounded-md bg-zinc-900 border border-zinc-800 text-[11px] font-mono text-emerald-400">
+            {formatCallDuration(elapsedSeconds)}
+          </span>
           <span className="text-xs text-zinc-400 flex items-center gap-1">
             <Users size={13} />
             {Math.max(1, participants.length)}
@@ -369,7 +428,11 @@ export function CallOverlay({
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5 max-h-56 overflow-y-auto">
-        <div className="relative rounded-2xl bg-zinc-900 border border-zinc-800 overflow-hidden aspect-video flex items-center justify-center">
+        <div
+          className={`relative rounded-2xl bg-zinc-900 border overflow-hidden aspect-video flex items-center justify-center transition ${
+            speaking && micOn ? 'border-emerald-400 ring-2 ring-emerald-400/50' : 'border-zinc-800'
+          }`}
+        >
           <video
             ref={localVideoRef}
             autoPlay
@@ -383,8 +446,15 @@ export function CallOverlay({
               <span className="text-xs text-zinc-400">You {micOn ? '' : '(Muted)'}</span>
             </div>
           )}
-          <span className="absolute bottom-2 left-2 px-2 py-0.5 rounded-md bg-black/60 text-[11px] font-medium">
+          {handRaised && (
+            <span className="absolute top-2 right-2 px-2 py-0.5 rounded-full bg-amber-500/90 text-zinc-950 text-[10px] font-bold flex items-center gap-1 shadow">
+              <HandPalm size={11} weight="fill" />
+              Hand
+            </span>
+          )}
+          <span className="absolute bottom-2 left-2 px-2 py-0.5 rounded-md bg-black/60 text-[11px] font-medium flex items-center gap-1">
             {sharingScreen ? 'Screen Sharing' : 'You'}
+            {!micOn && <MicrophoneSlash size={11} className="text-rose-400" />}
           </span>
         </div>
 
@@ -427,6 +497,17 @@ export function CallOverlay({
         </button>
         <button
           type="button"
+          onClick={toggleHand}
+          aria-pressed={handRaised}
+          className={`px-3.5 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition ${
+            handRaised ? 'bg-amber-500 text-zinc-950' : 'bg-zinc-800 hover:bg-zinc-700 text-white'
+          }`}
+        >
+          <HandPalm size={16} weight={handRaised ? 'fill' : 'duotone'} />
+          {handRaised ? 'Lower Hand' : 'Raise Hand'}
+        </button>
+        <button
+          type="button"
           onClick={onLeave}
           className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition"
         >
@@ -458,9 +539,27 @@ function RemoteTile({ participant, stream }: { participant: CallParticipant; str
           <span className="text-xs text-zinc-400">Connecting...</span>
         </div>
       )}
+      {participant.hand_raised && (
+        <span className="absolute top-2 right-2 px-2 py-0.5 rounded-full bg-amber-500/90 text-zinc-950 text-[10px] font-bold flex items-center gap-1 shadow">
+          <HandPalm size={11} weight="fill" />
+          Hand
+        </span>
+      )}
       <span className="absolute bottom-2 left-2 px-2 py-0.5 rounded-md bg-black/60 text-[11px] font-medium">
         {participant.user_name}
       </span>
+      <div className="absolute bottom-2 right-2 flex items-center gap-1">
+        {!participant.audio && (
+          <span title="Muted" className="p-1 rounded-md bg-black/65 text-rose-400">
+            <MicrophoneSlash size={11} />
+          </span>
+        )}
+        {!participant.video && (
+          <span title="Camera off" className="p-1 rounded-md bg-black/65 text-zinc-400">
+            <VideoCameraSlash size={11} />
+          </span>
+        )}
+      </div>
     </div>
   );
 }

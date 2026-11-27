@@ -41,6 +41,7 @@ interface SidebarProps {
   onOpenProfile: () => void;
   onOpenAdmin: () => void;
   onToggleTheme: () => void;
+  onMarkAllRead: () => Promise<void>;
   onLogout: () => void;
 }
 
@@ -64,13 +65,19 @@ export function Sidebar({
   onOpenProfile,
   onOpenAdmin,
   onToggleTheme,
+  onMarkAllRead,
   onLogout,
 }: SidebarProps) {
   const [filter, setFilter] = useState<FilterTab>('all');
   const [roomQuery, setRoomQuery] = useState('');
   const [copiedInvite, setCopiedInvite] = useState(false);
+  const [markingAllRead, setMarkingAllRead] = useState(false);
 
   const unreadTotal = rooms.filter((r) => r.unread && r.id !== activeRoomId).length;
+  const unreadMessagesTotal = rooms.reduce(
+    (sum, r) => sum + (r.unread && r.id !== activeRoomId ? Math.max(1, r.unread_count ?? 1) : 0),
+    0
+  );
 
   const filteredRooms = rooms.filter((r) => {
     if (filter === 'rooms' && r.type !== 'open') return false;
@@ -147,8 +154,12 @@ export function Sidebar({
                   </span>
                 )}
                 {room.unread && !isActive && (
-                  <span className="px-1.5 py-0.2 rounded-full bg-violet-600 text-[9px] font-bold text-white shadow-xs shadow-violet-600/50">
-                    New
+                  <span className="min-w-4 h-4 px-1.5 rounded-full bg-violet-600 text-[9px] font-bold text-white shadow-xs shadow-violet-600/50 flex items-center justify-center">
+                    {room.unread_count && room.unread_count > 0
+                      ? room.unread_count > 99
+                        ? '99+'
+                        : room.unread_count
+                      : 'New'}
                   </span>
                 )}
               </div>
@@ -175,7 +186,7 @@ export function Sidebar({
       id: 'all',
       label: 'All chats',
       icon: <ChatsTeardrop size={20} weight="duotone" />,
-      badge: unreadTotal > 0 ? unreadTotal : undefined,
+      badge: unreadMessagesTotal > 0 ? unreadMessagesTotal : undefined,
     },
     { id: 'rooms', label: 'Rooms', icon: <Hash size={20} weight="bold" /> },
     { id: 'private', label: 'Private', icon: <LockKey size={20} weight="duotone" /> },
@@ -418,7 +429,26 @@ export function Sidebar({
           <div className="space-y-1">
             <div className="px-2 flex items-center justify-between text-[10.5px] font-bold uppercase tracking-wider text-zinc-500 dark:text-violet-200/50">
               <span>{filterTitle[filter]}</span>
-              <span className="font-mono text-zinc-400">{regularRooms.length}</span>
+              <div className="flex items-center gap-2">
+                {unreadTotal > 0 && (
+                  <button
+                    type="button"
+                    disabled={markingAllRead}
+                    onClick={async () => {
+                      setMarkingAllRead(true);
+                      try {
+                        await onMarkAllRead();
+                      } finally {
+                        setMarkingAllRead(false);
+                      }
+                    }}
+                    className="text-[10px] font-semibold normal-case tracking-normal text-violet-600 dark:text-violet-300 hover:underline disabled:opacity-50 cursor-pointer"
+                  >
+                    {markingAllRead ? 'Clearing...' : 'Mark all read'}
+                  </button>
+                )}
+                <span className="font-mono text-zinc-400">{regularRooms.length}</span>
+              </div>
             </div>
             {regularRooms.map(renderRoomItem)}
           </div>

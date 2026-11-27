@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session, joinedload
 from ..auth import get_current_session, get_current_user, hash_password, verify_password
 from ..database import get_db
-from ..models import Membership, Room, SessionRoomUnlock, User, UserSession, utcnow
+from ..models import Membership, Message, Room, SessionRoomUnlock, User, UserSession, utcnow
 from ..schemas import InvolvementUpdateRequest, RoomCreateRequest, RoomUnlockRequest, RoomUpdateRequest
 from ..security import enforce_rate_limit
 from ..serializers import serialize_room
@@ -39,9 +39,40 @@ def list_rooms(db: Session = Depends(get_db), sess: UserSession = Depends(get_cu
         .all()
     )
     unlocked_ids = _unlocked_room_ids(db, sess.id)
-    rooms_out = [serialize_room(m.room, m, current_user.id, unlocked_ids) for m in memberships if m.room]
+    rooms_out = []
+    for m in memberships:
+        if not m.room:
+            continue
+        unread_count = 0
+        if m.unread_at is not None:
+            cnt = (
+                db.query(Message)
+                .filter(
+                    Message.room_id == m.room_id,
+                    Message.created_at >= m.unread_at,
+                    Message.creator_id != current_user.id,
+                )
+                .count()
+            )
+            unread_count = max(cnt, 1)
+        rooms_out.append(serialize_room(m.room, m, current_user.id, unlocked_ids, unread_count=unread_count))
     rooms_out.sort(key=lambda r: (0 if r["type"] == "open" else 1 if r["type"] == "closed" else 2, r["display_name"].lower()))
     return {"rooms": rooms_out}
+
+
+@router.post("/read_all")
+def mark_all_rooms_read(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    unread_memberships = (
+        db.query(Membership)
+        .filter(Membership.user_id == current_user.id, Membership.unread_at.isnot(None))
+        .all()
+    )
+    cleared = len(unread_memberships)
+    for m in unread_memberships:
+        m.unread_at = None
+    if cleared:
+        db.commit()
+    return {"ok": True, "cleared": cleared}
 
 
 @router.post("")
@@ -211,6 +242,25 @@ def mark_room_read(room_id: int, db: Session = Depends(get_db), current_user: Us
     if membership and membership.unread_at is not None:
         membership.unread_at = None
         db.commit()
+    return {"ok": True}
+
+
+@router.post("/{room_id}/leave")
+def leave_room(room_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    room = db.query(Room).filter(Room.id == room_id).first()
+    if not room:
+        raise HTTPException(status_code=404, detail="Room not found")
+    membership = db.query(Membership).filter(Membership.room_id == room_id, Membership.user_id == current_user.id).first()
+    if not membership:
+        raise HTTPException(status_code=404, detail="Membership not found")
+    if room.type == "direct":
+        raise HTTPException(status_code=400, detail="Direct message conversations cannot be left")
+    if room.type == "open":
+        raise HTTPException(status_code=400, detail="Open channels stay in your workspace list; mute notifications instead")
+    if room.creator_id == current_user.id:
+        raise HTTPException(status_code=400, detail="Room creators cannot leave; delete the room instead")
+    db.delete(membership)
+    db.commit()
     return {"ok": True}
 
 

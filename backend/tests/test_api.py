@@ -538,3 +538,74 @@ def test_mentions_inbox_and_scheduled_messages(isolated_env):
         assert admin_client.get(f"/api/rooms/{open_room_id}/scheduled").json()["scheduled"] == []
         bodies = [m["body"] for m in admin_client.get(f"/api/rooms/{open_room_id}/messages").json()["messages"]]
         assert "Due dispatch test" in bodies
+
+
+def test_unread_counts_mark_all_read_leave_and_call_hand(isolated_env):
+    with TestClient(app) as admin_client, TestClient(app) as member_client:
+        first = _bootstrap_admin(admin_client)
+        join_code = first["account"]["join_code"]
+        bob = member_client.post(
+            f"/api/join/{join_code}",
+            json={"name": "Bob", "email_address": "bob@deepchat.test", "password": "password123"},
+        ).json()["user"]
+
+        open_room_id = admin_client.get("/api/rooms").json()["rooms"][0]["id"]
+        private_room_id = admin_client.post(
+            "/api/rooms",
+            json={"name": "ops-private", "type": "closed", "member_ids": [bob["id"]]},
+        ).json()["room"]["id"]
+        dm_room_id = admin_client.post(
+            "/api/rooms",
+            json={"type": "direct", "member_ids": [bob["id"]]},
+        ).json()["room"]["id"]
+
+        # Bob starts with read state cleared, then Admin sends 2 messages in open_room + 1 in private_room
+        member_client.post("/api/rooms/read_all")
+        admin_client.post(f"/api/rooms/{open_room_id}/messages", json={"body": "Msg 1", "client_message_id": "u-1"})
+        admin_client.post(f"/api/rooms/{open_room_id}/messages", json={"body": "Msg 2", "client_message_id": "u-2"})
+        admin_client.post(
+            f"/api/rooms/{private_room_id}/messages",
+            json={"body": "Private Msg 1", "client_message_id": "u-3"},
+        )
+
+        bob_rooms = {r["id"]: r for r in member_client.get("/api/rooms").json()["rooms"]}
+        assert bob_rooms[open_room_id]["unread"] is True
+        assert bob_rooms[open_room_id]["unread_count"] == 2
+        assert bob_rooms[private_room_id]["unread"] is True
+        assert bob_rooms[private_room_id]["unread_count"] == 1
+
+        # Mark all read clears every unread room and resets unread_count
+        read_all_res = member_client.post("/api/rooms/read_all")
+        assert read_all_res.status_code == 200
+        assert read_all_res.json()["cleared"] >= 2
+
+        bob_rooms_after = {r["id"]: r for r in member_client.get("/api/rooms").json()["rooms"]}
+        assert all(not r["unread"] and r["unread_count"] == 0 for r in bob_rooms_after.values())
+
+        # Leave room guards & success
+        assert member_client.post(f"/api/rooms/{open_room_id}/leave").status_code == 400
+        assert member_client.post(f"/api/rooms/{dm_room_id}/leave").status_code == 400
+        assert admin_client.post(f"/api/rooms/{private_room_id}/leave").status_code == 400
+        assert member_client.post(f"/api/rooms/{private_room_id}/leave").status_code == 200
+
+        bob_ids = {r["id"] for r in member_client.get("/api/rooms").json()["rooms"]}
+        assert private_room_id not in bob_ids
+
+        # Call raise-hand signaling over WebSocket
+        with admin_client.websocket_connect(f"/ws/rooms/{open_room_id}") as ws:
+            init_ev = ws.receive_json()
+            assert init_ev["type"] == "call.participants"
+
+            ws.send_json({"type": "call.join", "video": False, "audio": True})
+            joined_ev = ws.receive_json()
+            assert joined_ev["type"] == "call.user_joined"
+            assert joined_ev["participant"]["hand_raised"] is False
+
+            ws.send_json({"type": "call.hand", "hand_raised": True})
+            hand_ev = ws.receive_json()
+            assert hand_ev["type"] == "call.participants"
+            assert hand_ev["participants"][0]["hand_raised"] is True
+
+            ws.send_json({"type": "call.leave"})
+            left_ev = ws.receive_json()
+            assert left_ev["type"] == "call.user_left"

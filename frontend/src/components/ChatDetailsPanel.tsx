@@ -4,6 +4,7 @@ import {
   BellRinging,
   BellSlash,
   CheckSquare,
+  DownloadSimple,
   FileText,
   Hash,
   LockKey,
@@ -85,6 +86,54 @@ export function ChatDetailsPanel({
     .filter((x): x is { url: string; title: string } => x !== null);
 
   const isMuted = room.involvement === 'nothing';
+
+  const exportMarkdown = () => {
+    const safeName =
+      (room.display_name || 'room')
+        .toLowerCase()
+        .replace(/[^a-z0-9-_]+/g, '-')
+        .replace(/^-|-$/g, '') || 'room';
+    const lines: string[] = [
+      `# ${room.type === 'direct' ? `@${room.display_name}` : `#${room.display_name}`}`,
+      `Exported: ${new Date().toISOString()}`,
+    ];
+    if (room.topic) lines.push(`Topic: ${room.topic}`);
+    lines.push('');
+
+    if (tasks.length > 0) {
+      lines.push('## Room Tasks', '');
+      for (const t of tasks) {
+        lines.push(`- [${t.completed ? 'x' : ' '}] ${t.title} _(${t.creator_name})_`);
+      }
+      lines.push('');
+    }
+
+    lines.push('## Messages', '');
+    for (const m of messages) {
+      const ts = new Date(m.created_at).toLocaleString();
+      const author = m.creator?.name || 'Unknown';
+      const pinTag = m.is_pinned ? ' [Pinned]' : '';
+      lines.push(`### ${author} — ${ts}${pinTag}`);
+      if (m.reply_to) {
+        lines.push(`> Replying to **${m.reply_to.creator_name}**: ${m.reply_to.body}`);
+      }
+      if (m.body) lines.push(m.body);
+      for (const att of m.attachments || []) {
+        lines.push(`- Attachment: [${att.filename}](${att.url})`);
+      }
+      lines.push('');
+    }
+
+    const blob = new Blob([lines.join('\n')], { type: 'text/markdown;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${safeName}-transcript.md`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  };
 
   const handleAddTask = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -215,6 +264,16 @@ export function ChatDetailsPanel({
               <UsersThree size={18} weight="duotone" />
             </button>
           </div>
+
+          <button
+            type="button"
+            disabled={messages.length === 0}
+            onClick={exportMarkdown}
+            className="w-full py-2 px-3 rounded-xl glass-panel hover:border-violet-400/50 disabled:opacity-45 text-xs font-semibold text-zinc-700 dark:text-zinc-200 flex items-center justify-center gap-2 transition cursor-pointer"
+          >
+            <DownloadSimple size={15} weight="duotone" className="text-violet-500" />
+            Export Chat (.md)
+          </button>
 
           {/* Shared Room Tasks */}
           <div>

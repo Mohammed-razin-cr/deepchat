@@ -119,10 +119,10 @@ async def _create_message_core(
         .all()
     )
     notify_user_ids = []
-    now = utcnow()
+    first_unread_at = msg.created_at or utcnow()
     for m in other_memberships:
         if m.involvement != "nothing" and m.unread_at is None:
-            m.unread_at = now
+            m.unread_at = first_unread_at
         notify_user_ids.append(m.user_id)
 
     db.commit()
@@ -573,6 +573,7 @@ async def ws_room(ws: WebSocket, room_id: int):
                     "user_name": user_name,
                     "video": bool(data.get("video", False)),
                     "audio": bool(data.get("audio", True)),
+                    "hand_raised": False,
                 }
                 ws_manager.call_participants[room_id][user_id] = participant
                 await ws_manager.broadcast_room(
@@ -597,6 +598,16 @@ async def ws_room(ws: WebSocket, room_id: int):
                 if user_id in ws_manager.call_participants[room_id]:
                     ws_manager.call_participants[room_id][user_id]["video"] = bool(data.get("video", False))
                     ws_manager.call_participants[room_id][user_id]["audio"] = bool(data.get("audio", True))
+                    await ws_manager.broadcast_room(
+                        room_id,
+                        {
+                            "type": "call.participants",
+                            "participants": list(ws_manager.call_participants[room_id].values()),
+                        },
+                    )
+            elif msg_type == "call.hand":
+                if user_id in ws_manager.call_participants[room_id]:
+                    ws_manager.call_participants[room_id][user_id]["hand_raised"] = bool(data.get("hand_raised", False))
                     await ws_manager.broadcast_room(
                         room_id,
                         {

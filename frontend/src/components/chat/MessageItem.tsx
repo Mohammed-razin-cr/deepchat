@@ -10,8 +10,10 @@ import {
   Copy,
   DownloadSimple,
   FileText,
+  LinkSimple,
   PencilSimple,
   PushPin,
+  ShareFat,
   SmileyWink,
   Trash,
   X,
@@ -44,7 +46,7 @@ function formatBytes(bytes: number) {
 
 function renderInlineMarkdown(text: string, currentUserName: string, isMine: boolean) {
   const tokenRegex =
-    /(`[^`]+`|\*\*[^*]+\*\*|\*[^*]+\*|~~[^~]+~~|https?:\/\/[^\s]+|@[A-Za-z0-9_.-]+(?:\s[A-Za-z0-9_.-]+)?)/g;
+    /(`[^`\n]+`|\*\*[^*\n]+\*\*|\*[^*\n]+\*|~~[^~\n]+~~|https?:\/\/[^\s]+|@[A-Za-z0-9_.-]+(?:\s[A-Za-z0-9_.-]+)?)/g;
   const parts = text.split(tokenRegex);
   return parts.map((part, idx) => {
     if (!part) return null;
@@ -190,6 +192,7 @@ interface MessageItemProps {
   onToggleEmojiMenu: () => void;
   onTogglePin: (messageId: number) => void;
   onToggleBookmark: (messageId: number) => void;
+  onForward: (msg: Message) => void;
 }
 
 export function MessageItem({
@@ -219,8 +222,17 @@ export function MessageItem({
   onToggleEmojiMenu,
   onTogglePin,
   onToggleBookmark,
+  onForward,
 }: MessageItemProps) {
+  const [copiedPermalink, setCopiedPermalink] = useState(false);
   const isMine = msg.creator?.id === currentUser.id;
+
+  const copyPermalink = () => {
+    const url = `${window.location.origin}/?room=${msg.room_id}&msg=${msg.id}`;
+    navigator.clipboard.writeText(url);
+    setCopiedPermalink(true);
+    setTimeout(() => setCopiedPermalink(false), 1500);
+  };
   const canModify = isMine || currentUser.role === 'administrator';
   const bookmarked = Boolean(msg.is_bookmarked);
   const compactHeader = groupedWithPrev && !msg.reply_to && !msg.is_pinned;
@@ -574,6 +586,28 @@ export function MessageItem({
               className="p-1.5 rounded-full text-zinc-500 hover:text-violet-500 hover:bg-violet-500/10 cursor-pointer"
             >
               <ChatText size={14} weight="duotone" />
+            </button>
+            <button
+              type="button"
+              onClick={() => onForward(msg)}
+              title="Forward message"
+              aria-label="Forward message"
+              className="p-1.5 rounded-full text-zinc-500 hover:text-violet-500 hover:bg-violet-500/10 cursor-pointer"
+            >
+              <ShareFat size={14} weight="duotone" />
+            </button>
+            <button
+              type="button"
+              onClick={copyPermalink}
+              title={copiedPermalink ? 'Link copied' : 'Copy message link'}
+              aria-label="Copy message link"
+              className="p-1.5 rounded-full text-zinc-500 hover:text-violet-500 hover:bg-violet-500/10 cursor-pointer"
+            >
+              {copiedPermalink ? (
+                <Check size={14} weight="bold" className="text-emerald-500" />
+              ) : (
+                <LinkSimple size={14} weight="duotone" />
+              )}
             </button>
             <button
               type="button"

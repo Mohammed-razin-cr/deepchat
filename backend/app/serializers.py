@@ -111,6 +111,7 @@ def serialize_room(
     membership: Membership | None = None,
     current_user_id: int | None = None,
     unlocked_room_ids: set[int] | None = None,
+    unread_count: int = 0,
 ) -> dict:
     members = []
     for m in room.memberships:
@@ -141,6 +142,7 @@ def serialize_room(
         "involvement": membership.involvement if membership else "mentions",
         "is_starred": bool(membership.is_starred) if membership else False,
         "unread": bool(membership and membership.unread_at is not None),
+        "unread_count": unread_count if (membership and membership.unread_at is not None) else 0,
         "unread_at": membership.unread_at.isoformat() + "Z" if membership and membership.unread_at else None,
         "members": members,
         "created_at": room.created_at.isoformat() + "Z",

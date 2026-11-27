@@ -35,6 +35,7 @@ export interface Room {
   involvement: 'everything' | 'mentions' | 'nothing';
   is_starred?: boolean;
   unread: boolean;
+  unread_count?: number;
   unread_at: string | null;
   members: User[];
   created_at: string;
@@ -109,6 +110,7 @@ export interface CallParticipant {
   user_name: string;
   video: boolean;
   audio: boolean;
+  hand_raised?: boolean;
 }
 
 export interface CallSignal {

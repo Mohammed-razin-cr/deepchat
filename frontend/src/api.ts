@@ -116,6 +116,8 @@ export const api = {
       body: JSON.stringify({ involvement }),
     }),
   markRead: (id: number) => request<{ ok: boolean }>(`/api/rooms/${id}/read`, { method: 'POST' }),
+  markAllRead: () => request<{ ok: boolean; cleared: number }>('/api/rooms/read_all', { method: 'POST' }),
+  leaveRoom: (id: number) => request<{ ok: boolean }>(`/api/rooms/${id}/leave`, { method: 'POST' }),
 
   listMessages: (roomId: number, before?: number) =>
     request<{ messages: Message[]; has_more: boolean }>(

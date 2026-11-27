@@ -44,6 +44,9 @@ const RoomMembersModal = lazy(() =>
 const RoomSettingsModal = lazy(() =>
   import('./components/modals/RoomModals').then((m) => ({ default: m.RoomSettingsModal }))
 );
+const ForwardModal = lazy(() =>
+  import('./components/modals/RoomModals').then((m) => ({ default: m.ForwardModal }))
+);
 const SearchModal = lazy(() =>
   import('./components/modals/SearchAndBookmarksModals').then((m) => ({ default: m.SearchModal }))
 );
@@ -97,6 +100,7 @@ export default function App() {
   const [inspectedUser, setInspectedUser] = useState<User | null>(null);
   const [assetsModalTab, setAssetsModalTab] = useState<'media' | 'files' | 'links' | null>(null);
   const [lightboxImage, setLightboxImage] = useState<{ url: string; filename: string } | null>(null);
+  const [forwardingMessage, setForwardingMessage] = useState<Message | null>(null);
 
   const [darkMode, setDarkMode] = useState(() => localStorage.getItem('deepchat_theme') !== 'light');
   const [mobileSidebar, setMobileSidebar] = useState(false);
@@ -149,8 +153,8 @@ export default function App() {
         setModal((prev) => (prev === 'search' ? null : 'search'));
       }
     };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+    window.addEventListener('keydown', onKey, { capture: true });
+    return () => window.removeEventListener('keydown', onKey, { capture: true });
   }, []);
 
   const loadWorkspaceData = useCallback(async () => {
@@ -161,8 +165,12 @@ export default function App() {
     if (roomsRes.rooms.length > 0) {
       const params = new URLSearchParams(window.location.search);
       const urlRoom = Number(params.get('room'));
+      const urlMsg = Number(params.get('msg'));
       const matched = urlRoom ? roomsRes.rooms.find((r) => r.id === urlRoom) : null;
       setActiveRoomId((prev) => prev ?? matched?.id ?? roomsRes.rooms[0].id);
+      if (matched && urlMsg && !Number.isNaN(urlMsg)) {
+        setHighlightMessageId(urlMsg);
+      }
       if (params.get('call') === '1' && matched) {
         setCallState({ active: true, video: true });
       }
@@ -222,7 +230,9 @@ export default function App() {
         setHasMore(msgRes.has_more);
         setRoomTasks(taskRes.tasks);
         setScheduledMessages(schedRes.scheduled);
-        setRooms((prev) => prev.map((r) => (r.id === activeRoomId ? { ...r, unread: false } : r)));
+        setRooms((prev) =>
+          prev.map((r) => (r.id === activeRoomId ? { ...r, unread: false, unread_count: 0, unread_at: null } : r))
+        );
       })
       .catch(() => {
         if (!cancelled) {
@@ -253,7 +263,9 @@ export default function App() {
         }
         if (roomId !== activeRoomId) {
           showToast(roomId, `New message in ${target.display_name}`);
-          return prev.map((r) => (r.id === roomId ? { ...r, unread: true } : r));
+          return prev.map((r) =>
+            r.id === roomId ? { ...r, unread: true, unread_count: (r.unread_count ?? 0) + 1 } : r
+          );
         }
         return prev;
       });
@@ -447,6 +459,10 @@ export default function App() {
           onOpenProfile={() => setModal('profile')}
           onOpenAdmin={() => setModal('admin')}
           onToggleTheme={() => setDarkMode((d) => !d)}
+          onMarkAllRead={async () => {
+            await api.markAllRead();
+            setRooms((prev) => prev.map((r) => ({ ...r, unread: false, unread_count: 0, unread_at: null })));
+          }}
           onLogout={async () => {
             await api.logout();
             setCurrentUser(null);
@@ -580,6 +596,7 @@ export default function App() {
             const res = await api.toggleBookmark(id);
             setMessages((prev) => prev.map((m) => (m.id === id ? { ...m, is_bookmarked: res.bookmarked } : m)));
           }}
+          onForwardMessage={(msg) => setForwardingMessage(msg)}
           onChangeInvolvement={async (involvement) => {
             if (!activeRoom) return;
             await api.updateInvolvement(activeRoom.id, involvement);
@@ -736,6 +753,7 @@ export default function App() {
           <RoomSettingsModal
             room={activeRoom}
             users={users}
+            currentUserId={currentUser.id}
             onClose={() => setModal(null)}
             onUpdated={(room) => setRooms((prev) => prev.map((r) => (r.id === room.id ? room : r)))}
             onDeleted={(roomId) => {
@@ -744,6 +762,27 @@ export default function App() {
                 selectRoom(next[0]?.id ?? null);
                 return next;
               });
+            }}
+            onLeft={(roomId) => {
+              setRooms((prev) => {
+                const next = prev.filter((r) => r.id !== roomId);
+                selectRoom(next[0]?.id ?? null);
+                return next;
+              });
+            }}
+          />
+        )}
+
+        {forwardingMessage && activeRoom && (
+          <ForwardModal
+            message={forwardingMessage}
+            rooms={rooms}
+            sourceRoomName={activeRoom.display_name}
+            onClose={() => setForwardingMessage(null)}
+            onForwarded={(targetRoomId) => {
+              if (targetRoomId !== activeRoom.id) {
+                selectRoom(targetRoomId);
+              }
             }}
           />
         )}

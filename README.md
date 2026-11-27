@@ -4,10 +4,10 @@ DeepChat is a fast, modern, self-hosted team chat & real-time collaboration plat
 
 ## Features
 
-- **Rooms, Topics & Private Vaults**: Open rooms, invite-only Private rooms, custom room **Topics**, **Starred** favorites, optional **Passcode Lock**, and **Disappearing Messages** (`1m` / `1h` / `24h`).
+- **Rooms, Topics & Private Vaults**: Open rooms, invite-only Private rooms, **Leave Room** support, custom room **Topics**, **Starred** favorites, numeric unread counts & **Mark All Read**, optional **Passcode Lock**, and **Disappearing Messages** (`1m` / `1h` / `24h`).
 - **Direct Messages & Member Profiles**: 1-on-1 and group direct messages, live online presence indicators, and clickable teammate profile inspectors.
-- **Group Voice, Video Calls & Voice Notes**: Built-in WebRTC group audio/video calls, screen sharing, shareable call links (`/?room=<id>&call=1`), and in-browser **Voice Note recording**.
-- **Threaded Discussions & Mentions Inbox**: Dedicated **Thread Drawer** (`N replies`), **`@Mentions & Replies` Inbox**, grouped message bubbles, markdown & fenced code blocks with copy buttons, pinned messages, emoji boosts, saved bookmarks, `@mentions` autocomplete, and slash commands (`/todo`, `/topic`, `/shrug`, `/tableflip`, `/me`, `/help`).
+- **Group Voice, Video Calls & Voice Notes**: Built-in WebRTC group audio/video calls, screen sharing, **Raise Hand** & live call timer, mic/cam status indicators, shareable call links (`/?room=<id>&call=1`), and in-browser **Voice Note recording**.
+- **Messaging, Forwarding & Export**: Dedicated **Thread Drawer** (`N replies`), **`@Mentions & Replies` Inbox**, **Forward Message** to rooms/DMs, copyable **Message Permalinks** (`/?room=<id>&msg=<id>`), Markdown formatting toolbar (`Ctrl+B` / `Ctrl+I`) & fenced code blocks, pinned messages, emoji boosts, bookmarks, slash commands (`/todo`, `/topic`, `/shrug`, `/tableflip`, `/me`, `/help`), and one-click **Export Chat (`.md`)**.
 - **Scheduled Messages, Tasks & Polls**: Schedule future messages (`Send later` / `Send now` queue with background delivery), real-time collaborative **Room Tasks** checklist over WebSockets, and interactive live polls.
 - **Files, Media Lightbox & Link Previews**: Drag-and-drop file uploads, inline full-resolution image lightbox, room **Assets Gallery**, and OpenGraph link unfurling.
 - **Full-Text Search**: Fast SQLite `FTS5` search (`Ctrl+K`) with search history.

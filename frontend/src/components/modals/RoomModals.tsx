@@ -1,7 +1,7 @@
-import { useState } from 'react';
-import { Check, Copy, Hash, LockKey } from '@phosphor-icons/react';
+import { useMemo, useState } from 'react';
+import { Check, Copy, Hash, LockKey, PaperPlaneTilt, SignOut } from '@phosphor-icons/react';
 import { api } from '../../api';
-import type { Account, Room, User } from '../../types';
+import type { Account, Message, Room, User } from '../../types';
 import { Avatar } from '../Avatar';
 import { MotionModal } from '../ui/MotionModal';
 import { ModalError } from './ModalAlerts';
@@ -409,15 +409,19 @@ export function RoomMembersModal({
 export function RoomSettingsModal({
   room,
   users,
+  currentUserId,
   onClose,
   onUpdated,
   onDeleted,
+  onLeft,
 }: {
   room: Room;
   users: User[];
+  currentUserId: number;
   onClose: () => void;
   onUpdated: (room: Room) => void;
   onDeleted: (roomId: number) => void;
+  onLeft: (roomId: number) => void;
 }) {
   const [name, setName] = useState(room.name || '');
   const [topic, setTopic] = useState(room.topic || '');
@@ -427,8 +431,11 @@ export function RoomSettingsModal({
   const [clearPasscode, setClearPasscode] = useState(false);
   const [disappearSeconds, setDisappearSeconds] = useState<number>(room.disappear_seconds || 0);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [confirmLeave, setConfirmLeave] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  const canLeaveRoom = room.type === 'closed' && room.creator_id !== currentUserId;
 
   const save = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -473,6 +480,20 @@ export function RoomSettingsModal({
       onClose();
     } catch (err) {
       setError(formatError(err, 'Failed to delete room'));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const leave = async () => {
+    setError('');
+    setLoading(true);
+    try {
+      await api.leaveRoom(room.id);
+      onLeft(room.id);
+      onClose();
+    } catch (err) {
+      setError(formatError(err, 'Failed to leave room'));
     } finally {
       setLoading(false);
     }
@@ -584,7 +605,37 @@ export function RoomSettingsModal({
           >
             {loading ? 'Saving...' : 'Save Changes'}
           </button>
-          {!confirmDelete ? (
+          {canLeaveRoom && !confirmDelete && (
+            !confirmLeave ? (
+              <button
+                type="button"
+                onClick={() => setConfirmLeave(true)}
+                className="px-3.5 py-2.5 rounded-xl bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 font-semibold text-sm flex items-center gap-1.5 cursor-pointer"
+              >
+                <SignOut className="w-4 h-4" />
+                Leave
+              </button>
+            ) : (
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  disabled={loading}
+                  onClick={leave}
+                  className="px-3 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-xs font-semibold cursor-pointer"
+                >
+                  Confirm Leave
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setConfirmLeave(false)}
+                  className="px-3 py-2.5 rounded-xl bg-stone-200 dark:bg-zinc-800 text-xs font-semibold cursor-pointer"
+                >
+                  Cancel
+                </button>
+              </div>
+            )
+          )}
+          {!confirmDelete && !confirmLeave ? (
             <button
               type="button"
               onClick={() => setConfirmDelete(true)}
@@ -592,7 +643,7 @@ export function RoomSettingsModal({
             >
               Delete
             </button>
-          ) : (
+          ) : confirmDelete ? (
             <div className="flex items-center gap-1.5">
               <button
                 type="button"
@@ -610,8 +661,149 @@ export function RoomSettingsModal({
                 Cancel
               </button>
             </div>
+          ) : null}
+        </div>
+      </form>
+    </MotionModal>
+  );
+}
+
+export function ForwardModal({
+  message,
+  rooms,
+  sourceRoomName,
+  onClose,
+  onForwarded,
+}: {
+  message: Message;
+  rooms: Room[];
+  sourceRoomName: string;
+  onClose: () => void;
+  onForwarded: (targetRoomId: number) => void;
+}) {
+  const [filter, setFilter] = useState('');
+  const [targetRoomId, setTargetRoomId] = useState<number | null>(null);
+  const [note, setNote] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const availableRooms = useMemo(() => {
+    const q = filter.trim().toLowerCase();
+    return rooms.filter((r) => {
+      if (r.is_locked && !r.unlocked) return false;
+      if (!q) return true;
+      return r.display_name.toLowerCase().includes(q);
+    });
+  }, [rooms, filter]);
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!targetRoomId) {
+      setError('Select a destination room or DM.');
+      return;
+    }
+    setError('');
+    setLoading(true);
+    try {
+      const author = message.creator?.name || 'Someone';
+      const quotedLines = (message.body || '')
+        .split('\n')
+        .map((line) => `> ${line}`)
+        .join('\n');
+      const header = `> Forwarded from **${author}** in **#${sourceRoomName}**`;
+      const forwardedBlock = quotedLines ? `${header}\n${quotedLines}` : header;
+      const body = note.trim() ? `${note.trim()}\n\n${forwardedBlock}` : forwardedBlock;
+
+      await api.createMessage(targetRoomId, {
+        body,
+        client_message_id: crypto.randomUUID(),
+        attachments: message.attachments,
+      });
+      onForwarded(targetRoomId);
+      onClose();
+    } catch (err) {
+      setError(formatError(err, 'Failed to forward message'));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <MotionModal title="Forward Message" onClose={onClose}>
+      <ModalError message={error} />
+      <form onSubmit={submit} className="space-y-4">
+        <div className="p-3 rounded-xl bg-stone-100/80 dark:bg-zinc-900/80 border border-stone-200 dark:border-zinc-800 text-xs text-zinc-600 dark:text-zinc-300 space-y-1">
+          <div className="font-semibold text-zinc-800 dark:text-zinc-100">
+            From {message.creator?.name || 'Unknown'} in #{sourceRoomName}
+          </div>
+          {message.body && <p className="line-clamp-3 whitespace-pre-wrap">{message.body}</p>}
+          {message.attachments.length > 0 && (
+            <div className="text-[11px] text-violet-500 font-medium">
+              Includes {message.attachments.length} attachment{message.attachments.length === 1 ? '' : 's'}
+            </div>
           )}
         </div>
+
+        <div>
+          <label className="block text-[11px] font-bold uppercase tracking-wider text-zinc-500 mb-1.5">
+            Optional Note
+          </label>
+          <input
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            placeholder="Add context before forwarding..."
+            className="w-full px-3.5 py-2 rounded-xl bg-stone-100 dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800 text-sm text-zinc-900 dark:text-zinc-100"
+          />
+        </div>
+
+        <div>
+          <label className="block text-[11px] font-bold uppercase tracking-wider text-zinc-500 mb-1.5">
+            Destination Room or DM
+          </label>
+          <input
+            value={filter}
+            onChange={(e) => setFilter(e.target.value)}
+            placeholder="Filter rooms or teammates..."
+            className="w-full px-3 py-1.5 mb-2 rounded-lg bg-stone-100 dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800 text-xs text-zinc-900 dark:text-zinc-100"
+          />
+          <div className="max-h-44 overflow-y-auto space-y-1 border border-stone-200 dark:border-zinc-800 rounded-xl p-1.5">
+            {availableRooms.length === 0 ? (
+              <p className="text-xs text-zinc-500 text-center py-4">No matching unlocked rooms.</p>
+            ) : (
+              availableRooms.map((r) => {
+                const selected = targetRoomId === r.id;
+                return (
+                  <button
+                    key={r.id}
+                    type="button"
+                    onClick={() => setTargetRoomId(r.id)}
+                    className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-left text-xs transition-colors cursor-pointer ${
+                      selected
+                        ? 'bg-violet-500/15 text-violet-600 dark:text-violet-300 border border-violet-500/30 font-semibold'
+                        : 'hover:bg-stone-100 dark:hover:bg-zinc-800/70 text-zinc-700 dark:text-zinc-300'
+                    }`}
+                  >
+                    <span className="truncate">
+                      {r.type === 'direct' ? `@ ${r.display_name}` : `# ${r.display_name}`}
+                    </span>
+                    <span className="text-[10px] uppercase tracking-wider text-zinc-400">
+                      {r.id === message.room_id ? 'current' : r.type}
+                    </span>
+                  </button>
+                );
+              })
+            )}
+          </div>
+        </div>
+
+        <button
+          type="submit"
+          disabled={loading || !targetRoomId}
+          className="w-full py-2.5 rounded-xl bg-violet-500 hover:bg-violet-400 disabled:opacity-60 text-white font-semibold flex items-center justify-center gap-2 cursor-pointer"
+        >
+          <PaperPlaneTilt className="w-4 h-4" />
+          {loading ? 'Forwarding...' : 'Forward Message'}
+        </button>
       </form>
     </MotionModal>
   );
